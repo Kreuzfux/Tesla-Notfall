@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tesla Notfall">
+<title>Tesla Notfall</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.svg">
+<meta name="theme-color" content="#e60000">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a0a; height: 100svh; overflow: hidden; }
+
+/* LAUNCH */
+#launch { height:100svh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0a0a0a; position:relative; overflow:hidden; }
+.ring { position:absolute; width:300px; height:300px; border-radius:50%; border:1px solid rgba(200,0,0,0.1); animation:ring 3s ease-out infinite; }
+.ring:nth-child(2){animation-delay:1s} .ring:nth-child(3){animation-delay:2s}
+@keyframes ring{0%{transform:scale(1);opacity:1}100%{transform:scale(2.8);opacity:0}}
+#launch-top { color:#444; font-size:11px; letter-spacing:3px; text-transform:uppercase; margin-bottom:48px; font-weight:600; }
+#launch-btn { width:200px; height:200px; border-radius:50%; background:radial-gradient(circle,#e60000 0%,#aa0000 70%,#880000 100%); border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; box-shadow:0 0 60px rgba(200,0,0,0.5),0 0 120px rgba(200,0,0,0.2); transition:all 0.12s ease; z-index:10; position:relative; -webkit-tap-highlight-color:transparent; }
+#launch-btn:active { transform:scale(0.96); background:radial-gradient(circle,#a00000 0%,#800000 100%); }
+#launch-btn .icon { font-size:52px; line-height:1; }
+#launch-btn .lbl { color:white; font-weight:800; font-size:16px; letter-spacing:1.5px; text-transform:uppercase; }
+#launch-hint { color:#333; font-size:12px; margin-top:48px; }
+#launch-footer { position:absolute; bottom:max(20px,env(safe-area-inset-bottom)); color:#2a2a2a; font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+
+/* APP */
+#app { display:none; flex-direction:column; height:100svh; max-width:480px; margin:0 auto; }
+#header { background:linear-gradient(135deg,#b30000,#cc0000,#e60000); padding:14px 16px 12px; padding-top:max(14px,env(safe-area-inset-top)); display:flex; align-items:center; gap:10px; box-shadow:0 2px 20px rgba(200,0,0,0.4); flex-shrink:0; }
+#back-btn { background:rgba(0,0,0,0.25); border:none; color:white; border-radius:8px; width:34px; height:34px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; -webkit-tap-highlight-color:transparent; }
+#header-title { color:white; font-weight:700; font-size:15px; }
+#header-sub { color:rgba(255,255,255,0.75); font-size:11px; }
+
+/* TABS */
+#tabs { display:flex; background:#111; border-bottom:1px solid #222; flex-shrink:0; }
+.tab { flex:1; padding:11px 4px; background:none; border:none; color:#555; font-size:12px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; -webkit-tap-highlight-color:transparent; }
+.tab.active { color:#e60000; border-bottom-color:#e60000; }
+
+/* WARNING */
+#warning { background:#1a1100; border-bottom:1px solid #3a2500; padding:8px 16px; display:flex; align-items:center; gap:8px; flex-shrink:0; font-size:11px; color:#ffaa00; font-weight:600; }
+
+/* PANELS */
+.panel { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:none; }
+.panel.active { display:block; }
+
+/* SECTION CARDS */
+.section { border-bottom:1px solid #161616; }
+.sec-header { padding:14px 16px; display:flex; align-items:center; gap:10px; cursor:pointer; background:#0f0f0f; -webkit-tap-highlight-color:transparent; user-select:none; }
+.sec-header:active { background:#1a1a1a; }
+.sec-icon { font-size:22px; flex-shrink:0; }
+.sec-title { color:#ddd; font-size:14px; font-weight:700; flex:1; }
+.sec-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; }
+.badge-red { background:#3a0000; color:#ff4444; }
+.badge-orange { background:#2a1500; color:#ff8800; }
+.badge-blue { background:#001a3a; color:#4488ff; }
+.sec-arrow { color:#444; font-size:16px; transition:transform 0.2s; flex-shrink:0; }
+.sec-arrow.open { transform:rotate(90deg); }
+.sec-body { display:none; padding:12px 16px 16px; background:#0a0a0a; }
+.sec-body.open { display:block; }
+
+/* WARNING BOX */
+.warn-box { background:#2a0000; border:1px solid #550000; border-radius:10px; padding:10px 12px; margin-bottom:12px; display:flex; gap:8px; }
+.warn-box .w-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+.warn-box .w-text { color:#ff8888; font-size:12px; line-height:1.5; font-weight:600; }
+.info-box { background:#0a1a00; border:1px solid #1a3a00; border-radius:10px; padding:10px 12px; margin-bottom:12px; display:flex; gap:8px; }
+.info-box .w-text { color:#88cc88; font-size:12px; line-height:1.5; }
+
+/* STEPS */
+.steps { list-style:none; display:flex; flex-direction:column; gap:6px; }
+.steps li { display:flex; gap:10px; align-items:flex-start; }
+.step-num { width:22px; height:22px; border-radius:50%; background:#cc0000; color:white; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.step-num.grey { background:#2a2a2a; color:#888; }
+.step-num.orange { background:#cc6600; }
+.step-text { color:#ccc; font-size:13px; line-height:1.5; flex:1; }
+.step-text b { color:white; }
+.step-text .note { display:block; color:#666; font-size:11px; margin-top:2px; }
+
+/* BULLETS */
+.bullets { list-style:none; display:flex; flex-direction:column; gap:5px; margin-top:2px; }
+.bullets li { display:flex; gap:8px; align-items:flex-start; }
+.bullets li::before { content:"•"; color:#cc0000; font-size:14px; line-height:1.4; flex-shrink:0; }
+.bullets .bt { color:#bbb; font-size:13px; line-height:1.5; }
+.bullets .bt b { color:white; }
+
+/* DIVIDER */
+.divider { color:#444; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin:14px 0 8px; padding-bottom:4px; border-bottom:1px solid #1a1a1a; }
+
+/* LINK BTN */
+.link-btn { display:flex; align-items:center; justify-content:space-between; background:#181818; border:1px solid #2a2a2a; border-radius:12px; padding:12px 14px; margin-top:8px; cursor:pointer; text-decoration:none; -webkit-tap-highlight-color:transparent; }
+.link-btn:active { background:#222; }
+.link-btn .lt { color:#ccc; font-size:13px; font-weight:600; }
+.link-btn .ls { color:#555; font-size:11px; margin-top:2px; }
+.link-btn .la { color:#cc0000; font-size:16px; }
+</style>
+</head>
+<body>
+
+<!-- LAUNCH -->
+<div id="launch">
+  <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+  <div id="launch-top">Tesla Model Y 2025+</div>
+  <button id="launch-btn" onclick="openApp()">
+    <span class="icon">🚨</span>
+    <span class="lbl">Notfall</span>
+  </button>
+  <div id="launch-hint">Tippen zum Starten</div>
+  <div id="launch-footer">Ersthelfer-Guide · Benutzerhandbuch DE</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="header">
+    <button id="back-btn" onclick="closeApp()">←</button>
+    <div>
+      <div id="header-title">Tesla Model Y 2025+</div>
+      <div id="header-sub">Notfall- & Benutzerhandbuch</div>
+    </div>
+  </div>
+
+  <div id="tabs">
+    <button class="tab active" onclick="showTab('notfall')">🚨 Notfall</button>
+    <button class="tab" onclick="showTab('manual')">📖 Handbuch</button>
+    <button class="tab" onclick="showTab('technik')">🔧 Technik</button>
+  </div>
+
+  <div id="warning">⚠️ Kein Motorgeräusch ≠ Fahrzeug aus! Immer PSA tragen.</div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 1: NOTFALL -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="panel-notfall" class="panel active">
+
+    <!-- DEAKTIVIEREN -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">⚡</span>
+        <span class="sec-title">Hochvolt deaktivieren</span>
+        <span class="sec-badge badge-red">PRIORITÄT 1</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="warn-box"><span class="w-icon">⚠️</span><span class="w-text">HV-Komponenten gelten IMMER als energized — auch nach dem Schneiden!</span></div>
+        <div class="divider">Hauptmethode (unter Motorhaube)</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Motorhaube öffnen (siehe Tab Technik)</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Abdeckpanel nach oben herausziehen (Clips lösen sich)</span></li>
+          <li><span class="step-num">3</span><span class="step-text"><b>First Responder Loop doppelt durchtrennen</b> — Abschnitt entfernen<span class="note">Doppelschnitt verhindert, dass Enden sich wieder berühren</span></span></li>
+          <li><span class="step-num">4</span><span class="step-text">2 Minuten warten bis HV de-energized</span></li>
+        </ol>
+        <div class="divider">Alternativmethode (ohne Motorhaube)</div>
+        <ol class="steps">
+          <li><span class="step-num grey">1</span><span class="step-text">Hinteres <b>rechtes Seitenfenster</b> einschlagen</span></li>
+          <li><span class="step-num grey">2</span><span class="step-text">Innenverkleidung entfernen</span></li>
+          <li><span class="step-num grey">3</span><span class="step-text">Sekundären First Responder Loop doppelt durchtrennen</span></li>
+        </ol>
+        <div class="divider">Komplett-Abschaltung</div>
+        <ol class="steps">
+          <li><span class="step-num orange">1</span><span class="step-text">First Responder Loop durchtrennen (Haupt- oder Alternativmethode)</span></li>
+          <li><span class="step-num orange">2</span><span class="step-text">Negative 16V-Batteriekabel doppelt durchtrennen<span class="note">Nie Positiv- und Negativkabel gleichzeitig schneiden!</span></span></li>
+          <li><span class="step-num orange">3</span><span class="step-text">2 Minuten warten</span></li>
+        </ol>
+        <div class="warn-box" style="margin-top:12px"><span class="w-icon">🔋</span><span class="w-text">Die HV-Batterie bleibt IMMER energized. Orangefarbene Kabel NIE schneiden!</span></div>
+      </div>
+    </div>
+
+    <!-- BRAND -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🔥</span>
+        <span class="sec-title">Brand / Batterie-Feuer</span>
+        <span class="sec-badge badge-red">GEFAHR</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="warn-box"><span class="w-icon">🚫</span><span class="w-text">Fahrzeug NICHT in Wasser tauchen — Re-Ignition-Gefahr!</span></div>
+        <div class="divider">Sofortmaßnahmen</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Vollständige PSA anlegen inkl. <b>SCBA (Atemschutz)</b></span></li>
+          <li><span class="step-num">2</span><span class="step-text"><b>Große Mengen Wasser</b> direkt auf die Batterie (Unterseite des Fahrzeugs)</span></li>
+          <li><span class="step-num">3</span><span class="step-text">Zusätzliche Wasserversorgung frühzeitig anfordern</span></li>
+          <li><span class="step-num">4</span><span class="step-text">Wenn möglich: Fahrzeug anheben/kippen für direkten Zugang zur Batterie</span></li>
+        </ol>
+        <div class="divider">Wassermengen</div>
+        <ul class="bullets">
+          <li><span class="bt"><b>11.000 – 30.000 Liter</b> Wasser für vollständige Löschung</span></li>
+          <li><span class="bt">Wasser bis Batterie auf Umgebungstemperatur abgekühlt ist (TIC/IR nutzen)</span></li>
+          <li><span class="bt">Kein Schaum — Tesla empfiehlt ausschließlich Wasser</span></li>
+        </ul>
+        <div class="divider">Überwachung & Übergabe</div>
+        <ul class="bullets">
+          <li><span class="bt">Thermalkamera (TIC/IR) zur Temperaturüberwachung verwenden</span></li>
+          <li><span class="bt">Mindestens <b>45 Minuten</b> kein Feuer, Rauch oder Zischen — erst dann Übergabe</span></li>
+          <li><span class="bt">Batterie kann bis zu <b>24 Stunden</b> zum vollständigen Abkühlen brauchen</span></li>
+          <li><span class="bt">Re-Ignition immer möglich — Fahrzeug <b>min. 15 Meter</b> von anderen Fahrzeugen/Gebäuden lagern</span></li>
+          <li><span class="bt">Vorderseite ca. 30 cm anheben zum Ablaufen des Löschwassers</span></li>
+        </ul>
+        <div class="warn-box" style="margin-top:12px"><span class="w-icon">☠️</span><span class="w-text">Brennende Batterie setzt giftige Gase frei: Wasserstoff, CO, CO₂, Fluorwasserstoff, Metalloxide. Immer SCBA tragen, Zivilisten aus dem Lee-Bereich fernhalten.</span></div>
+      </div>
+    </div>
+
+    <!-- TÜREN ÖFFNEN -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🚪</span>
+        <span class="sec-title">Türen öffnen</span>
+        <span class="sec-badge badge-orange">ZUGANG</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="divider">Von außen — MIT Strom</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Breite Seite des Türgriffs <b>nach innen drücken</b></span></li>
+          <li><span class="step-num">2</span><span class="step-text">Tür aufziehen</span></li>
+        </ol>
+        <div class="divider">Von innen — MIT Strom</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Knopf an der <b>Türverkleidung</b> drücken</span></li>
+        </ol>
+        <div class="divider">Vordertüren — OHNE Strom</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Fensterscheibe einschlagen oder herunterfahren</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Mechanischen Hebel <b>neben den Fensterschaltern</b> hochheben</span></li>
+        </ol>
+        <div class="divider">Hintertüren — OHNE Strom</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Schlitz am <b>unteren Ende der Türtasche</b> finden</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Abdeckung mit Finger herausziehen</span></li>
+          <li><span class="step-num">3</span><span class="step-text">Mechanisches Kabel <b>nach vorne ziehen</b></span></li>
+        </ol>
+        <div class="info-box"><span class="w-text">ℹ️ Nach Kollision kann der mechanische Notöffner beschädigt sein — dann Extrication nötig.</span></div>
+      </div>
+    </div>
+
+    <!-- MOTORHAUBE ÖFFNEN -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🔩</span>
+        <span class="sec-title">Motorhaube öffnen</span>
+        <span class="sec-badge badge-orange">ZUGANG</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="divider">MIT Strom</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Touchscreen: <b>Steuerung → Frunk → Öffnen</b></span></li>
+        </ol>
+        <div class="divider">OHNE Strom (externe 12V-Quelle)</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Abdeckkappe am <b>Abschlepphaken vorne rechts</b> fest auf der oberen rechten Seite eindrücken bis sie aufklappt</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Zwei Kabel aus der Öffnung herausziehen</span></li>
+          <li><span class="step-num">3</span><span class="step-text"><b>Rotes (+) Kabel</b> an Pluspol der externen Stromquelle</span></li>
+          <li><span class="step-num">4</span><span class="step-text"><b>Schwarzes (–) Kabel</b> an Minuspol der externen Stromquelle</span></li>
+          <li><span class="step-num">5</span><span class="step-text">Stromquelle einschalten → Motorhauben-Verriegelung öffnet sofort</span></li>
+          <li><span class="step-num">6</span><span class="step-text">Haube aufheben, Kabel trennen (Minus zuerst)</span></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- IMMOBILISIERUNG -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🛑</span>
+        <span class="sec-title">Immobilisierung</span>
+        <span class="sec-badge badge-orange">SICHERUNG</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="warn-box"><span class="w-icon">⚠️</span><span class="w-text">Das Fahrzeug ist geräuschlos — NIE annehmen es sei ausgeschaltet!</span></div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text"><b>Räder blockieren</b> — immer als erstes</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Park (P) auf Touchscreen oder Overhead-Konsole <b>lang drücken</b></span></li>
+        </ol>
+        <div class="info-box" style="margin-top:10px"><span class="w-text">ℹ️ Wenn Park aktiv ist, zeigt der Touchscreen P an und die Feststellbremse greift automatisch.</span></div>
+      </div>
+    </div>
+
+    <!-- HEBEN -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🏗️</span>
+        <span class="sec-title">Heben & Stabilisieren</span>
+        <span class="sec-badge badge-orange">VORSICHT</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="warn-box"><span class="w-icon">🔋</span><span class="w-text">HV-Batterie nimmt fast die gesamte Unterseite ein. NIE die Batterie als Hebebasis verwenden!</span></div>
+        <ul class="bullets">
+          <li><span class="bt">Nur <b>designierte Hebepunkte</b> verwenden (vorne und hinten an den Achsträgern)</span></li>
+          <li><span class="bt">Nur NFPA-geschulte Ersthelfer dürfen das Fahrzeug heben</span></li>
+          <li><span class="bt">Bei Fahrzeug auf der Seite: gelbe Stabilisierungspunkte (Seitenschweller) verwenden</span></li>
+          <li><span class="bt">NIE auf den Fahrzeugboden drücken — Batterie kann beschädigt werden</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- VERSUNKEN -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">💧</span>
+        <span class="sec-title">Fahrzeug versunken</span>
+        <span class="sec-badge badge-red">GEFAHR</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="info-box"><span class="w-text">ℹ️ Das Fahrzeug selbst stellt im Wasser kein erhöhtes Schockrisiko dar — trotzdem volle Wasserrettungs-PSA tragen.</span></div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Wasserrettungs-PSA anlegen</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Fahrzeug aus dem Wasser bergen</span></li>
+          <li><span class="step-num">3</span><span class="step-text">Normale Deaktivierung (First Responder Loop) durchführen</span></li>
+          <li><span class="step-num">4</span><span class="step-text"><b>Vorderseite ca. 30 cm anheben</b> — Wasser aus Fahrzeug und Batterie ablaufen lassen</span></li>
+          <li><span class="step-num">5</span><span class="step-text">TIC/IR zur Temperaturüberwachung einsetzen</span></li>
+          <li><span class="step-num">6</span><span class="step-text">Fahrzeug außen lagern, <b>min. 15 Meter Abstand</b> zu Gebäuden und anderen Fahrzeugen</span></li>
+        </ol>
+        <div class="warn-box" style="margin-top:10px"><span class="w-icon">🚫</span><span class="w-text">KEIN Löschschaum bei Salzwasser-Versinkung — erhöhte Brandgefahr!</span></div>
+      </div>
+    </div>
+
+    <!-- TRANSPORT -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🚛</span>
+        <span class="sec-title">Transport & Abschleppen</span>
+        <span class="sec-badge badge-orange">HINWEIS</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="warn-box"><span class="w-icon">🔴</span><span class="w-text">NIEMALS mit Rädern auf dem Boden transportieren — der Hintermotor erzeugt Strom wenn Räder drehen → Überhitzungsgefahr, in seltenen Fällen Brand!</span></div>
+        <div class="divider">Empfohlene Methode</div>
+        <ul class="bullets">
+          <li><span class="bt"><b>Flatbed/Rollback</b> — alle 4 Räder vom Boden, Fahrzeug kann in beide Richtungen aufgeladen werden</span></li>
+        </ul>
+        <div class="divider">Tow Mode aktivieren</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Park (P) lang drücken</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Bremse halten → Touchscreen: <b>Steuerung → Service → Abschleppen</b></span></li>
+          <li><span class="step-num">3</span><span class="step-text">"Abschlepp-Modus aktivieren" drücken bis blau</span></li>
+        </ol>
+        <div class="info-box" style="margin-top:10px"><span class="w-text">ℹ️ Ohne Tow Mode: Dolly/Radauflagen für alle 4 Räder nötig. Max. Rollgeschwindigkeit im Tow Mode: 8 km/h, max. 10 Meter.</span></div>
+        <div class="warn-box" style="margin-top:10px"><span class="w-icon">🔥</span><span class="w-text">Nach Brandvorfall: Fahrzeug außen lagern, mind. 15 m Abstand!</span></div>
+      </div>
+    </div>
+
+    <!-- AIRBAGS -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">💥</span>
+        <span class="sec-title">Airbags & Pyrotechnik</span>
+        <span class="sec-badge badge-orange">VORSICHT</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="divider">Airbag-Positionen</div>
+        <ul class="bullets">
+          <li><span class="bt">Knieairbags (nur Nordamerika)</span></li>
+          <li><span class="bt">Lenkrad-Airbag</span></li>
+          <li><span class="bt">Beifahrer-Airbag</span></li>
+          <li><span class="bt">Seitliche Sitzairbags (beide Reihen)</span></li>
+          <li><span class="bt">Vorhangairbags (Dachbereich, vorne und hinten)</span></li>
+        </ul>
+        <div class="divider">Nach Auslösung</div>
+        <ul class="bullets">
+          <li><span class="bt">Pyrotechnische Sicherung trennt HV-System automatisch</span></li>
+          <li><span class="bt">Trotzdem: First Responder Loop durchtrennen</span></li>
+          <li><span class="bt"><b>RCM (Airbag-Steuergerät) hat 10 Sekunden Notstrom</b> nach Abschaltung — nicht berühren!</span></li>
+        </ul>
+        <div class="divider">Gasdruckbehälter & Aktive Haube</div>
+        <ul class="bullets">
+          <li><span class="bt">Gasdruckbehälter befinden sich im hinteren Dachbereich — NIE schneiden oder quetschen!</span></li>
+          <li><span class="bt">Aktive Haube: Pyrotechnik unter der Motorhaube (Fußgängerschutz) — NIE quetschen!</span></li>
+          <li><span class="bt">Sitzgurt-Straftpyrotechnik an B-Säulen oben/unten und außen am 2. Sitzreihen — NIE quetschen!</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- LADEN NOTFALL -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🔌</span>
+        <span class="sec-title">Ladekabel im Notfall</span>
+        <span class="sec-badge badge-orange">VORSICHT</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="warn-box"><span class="w-icon">⚡</span><span class="w-text">Ladekabel NIEMALS unter Spannung schneiden — Brand- und Verletzungsgefahr!</span></div>
+        <div class="divider">Normales Trennen</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Touchscreen: <b>Steuerung → Laden → Ladeport entsperren</b></span></li>
+          <li><span class="step-num">2</span><span class="step-text">Oder: Knopf am Tesla-Ladekabel drücken (bei entsperrtem Fahrzeug)</span></li>
+        </ol>
+        <div class="divider">Wenn Kabel klemmt — Ladestation abstellen</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text"><b>Ladestation ausschalten</b></span></li>
+          <li><span class="step-num">2</span><span class="step-text">Dann First Responder Loop durchtrennen</span></li>
+        </ol>
+        <div class="divider">Manuelles Entriegeln</div>
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Hintere Heckklappe öffnen</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Seilzug <b>nach unten ziehen</b> (Ladeport-Notöffner)</span></li>
+          <li><span class="step-num">3</span><span class="step-text">Erst dann Kabel aus dem Ladeport ziehen</span></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- KONTAKT -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">📞</span>
+        <span class="sec-title">Kontakt Tesla</span>
+        <span class="sec-badge badge-blue">INFO</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <a class="link-btn" href="https://www.tesla.com/support/roadside-assistance" target="_blank">
+          <div><div class="lt">Tesla Pannendienst</div><div class="ls">tesla.com/support/roadside-assistance</div></div>
+          <span class="la">↗</span>
+        </a>
+        <a class="link-btn" href="https://www.tesla.com/firstresponders" target="_blank">
+          <div><div class="lt">Tesla Ersthelfer-Portal</div><div class="ls">tesla.com/firstresponders</div></div>
+          <span class="la">↗</span>
+        </a>
+        <a class="link-btn" href="mailto:firstrespondersafety@tesla.com">
+          <div><div class="lt">Ersthelfer E-Mail</div><div class="ls">firstrespondersafety@tesla.com</div></div>
+          <span class="la">↗</span>
+        </a>
+      </div>
+    </div>
+
+  </div><!-- end panel-notfall -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 2: HANDBUCH -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="panel-manual" class="panel">
+
+    <div style="padding:14px 16px; background:#111; border-bottom:1px solid #222; display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <div style="color:white;font-weight:700;font-size:14px;">📖 Offizielles Benutzerhandbuch</div>
+        <div style="color:#555;font-size:11px;margin-top:2px;">Deutsch · Model Y 2025+ · SW 2026.2.8</div>
+      </div>
+      <a href="https://www.tesla.com/ownersmanual/modely/de_de/" target="_blank" style="background:#cc0000;border:none;color:white;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent;white-space:nowrap;">Öffnen ↗</a>
+    </div>
+
+    <!-- Notfall-Kapitel -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🆘</span>
+        <span class="sec-title">Bei einem Notfall</span>
+        <span class="sec-badge badge-red">WICHTIG</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-9914F959-69CC-4835-ADA2-0970F108FE20.html" target="_blank"><div><div class="lt">Tesla Pannendienst rufen</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-8333FCE9-A70A-4470-8EBB-867423A1B5DC.html" target="_blank"><div><div class="lt">Notruf</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-CB07D968-612A-4FAB-977D-CD01C69464D0.html" target="_blank"><div><div class="lt">Batterie leer</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-34181E3A-B4A7-4658-906A-38C6647B5664.html" target="_blank"><div><div class="lt">Haube ohne Strom öffnen</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-3567D5F4-A5F4-4323-8BE0-023D5438FFC6.html" target="_blank"><div><div class="lt">Starthilfe (12V Jumpstart)</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-A7A60DC7-E476-4A86-9C9C-10F4A276AB8B.html" target="_blank"><div><div class="lt">Türen ohne Strom öffnen</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-5D2AF796-2052-4A24-9327-E3C0E2DB9B19.html" target="_blank"><div><div class="lt">Überschwemmung</div></div><span class="la">↗</span></a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🔑</span>
+        <span class="sec-title">Öffnen & Schließen</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-E004FAB7-1C71-448F-9492-CACF301304D2.html" target="_blank"><div><div class="lt">Schlüssel</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-7A32EC01-A17E-42CC-A15B-2E0A39FD07AB.html" target="_blank"><div><div class="lt">Türen</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-B4E78C91-BCD3-4713-90AA-F3E2406158CC.html" target="_blank"><div><div class="lt">Fenster</div></div><span class="la">↗</span></a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🛡️</span>
+        <span class="sec-title">Sicherheitssysteme</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-64C3BD83-0089-41A2-B9DD-9CDC0212D6AE.html" target="_blank"><div><div class="lt">Sitze</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-3319C55D-F148-4D9C-98A6-AD09BA7EED61.html" target="_blank"><div><div class="lt">Sicherheitsgurte</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-AF5E4CCC-E4C1-4158-9A7C-66C226BEBDBA.html" target="_blank"><div><div class="lt">Kindersitze</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-2F410353-A4FB-444C-8146-921FEB23941C.html" target="_blank"><div><div class="lt">Airbags</div></div><span class="la">↗</span></a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">⚡</span>
+        <span class="sec-title">Laden & Energie</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-BEE08D47-0CE0-4BDD-83F2-9854FB3D578F.html" target="_blank"><div><div class="lt">Anweisungen zum Laden</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-7FE78D73-0A17-47C4-B21B-54F641FFAEF4.html" target="_blank"><div><div class="lt">Informationen zur HV-Batterie</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-8FA15856-1720-440F-838B-ACFBA8D7D608.html" target="_blank"><div><div class="lt">Elektrische Komponenten</div></div><span class="la">↗</span></a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🚚</span>
+        <span class="sec-title">Transporteure</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-FA9E3DC9-805C-45BD-A64D-C4B3F491B8C0.html" target="_blank"><div><div class="lt">Anweisungen für Transporteure</div></div><span class="la">↗</span></a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🔧</span>
+        <span class="sec-title">Wartung & Fehlerbehebung</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-9E6DD5CB-40BA-4A29-B20D-457303555037.html" target="_blank"><div><div class="lt">Aufbocken & Anheben</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-E95DAAD9-646E-4249-9930-B109ED7B1D91.html" target="_blank"><div><div class="lt">Wartungsintervalle</div></div><span class="la">↗</span></a>
+        <a class="link-btn" href="https://www.tesla.com/ownersmanual/modely/de_de/GUID-9A3F0F72-71F4-433D-B68B-0A472A9359DF.html" target="_blank"><div><div class="lt">Fehlerbehebung</div></div><span class="la">↗</span></a>
+      </div>
+    </div>
+
+  </div><!-- end panel-manual -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 3: TECHNIK -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="panel-technik" class="panel">
+
+    <!-- FAHRZEUG ERKENNEN -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🔍</span>
+        <span class="sec-title">Fahrzeug erkennen</span>
+        <span class="sec-badge badge-blue">INFO</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <ul class="bullets">
+          <li><span class="bt"><b>TESLA</b>-Schriftzug an der Heckklappe</span></li>
+          <li><span class="bt">Einzigartige flache Türgriffe (kein Modellname auf dem Fahrzeug)</span></li>
+          <li><span class="bt">2025er: Neue Scheinwerferform, eckigere Frontpartie</span></li>
+          <li><span class="bt">Dual Motor: Badge "DUAL MOTOR" an der Heckklappe</span></li>
+          <li><span class="bt">Innen: Großes Touchscreen im <b>Querformat</b>, nur <b>ein</b> Lenkstockhebel</span></li>
+        </ul>
+        <div class="divider">VIN-Position</div>
+        <ul class="bullets">
+          <li><span class="bt">Armaturenbrett oben, sichtbar durch Windschutzscheibe Fahrerseite</span></li>
+          <li><span class="bt">B-Säule Fahrerseite</span></li>
+          <li><span class="bt">Unter Teppich Beifahrersitz vorne</span></li>
+          <li><span class="bt">Etikett hinten rechts unter Innenverkleidung</span></li>
+          <li><span class="bt">Touchscreen: Steuerung → Software (wenn Touchscreen aktiv)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SPANNUNGSSYSTEM -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">⚡</span>
+        <span class="sec-title">Spannungssysteme</span>
+        <span class="sec-badge badge-red">HOCHVOLT</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="divider">400V Hochvolt-System</div>
+        <ul class="bullets">
+          <li><span class="bt">HV-Batterie: Unter dem gesamten Fahrzeugboden (Lithium-Ionen)</span></li>
+          <li><span class="bt">Hintermotor (alle Varianten)</span></li>
+          <li><span class="bt">Vordermotor (nur Dual Motor)</span></li>
+          <li><span class="bt">Klimakompressor</span></li>
+          <li><span class="bt">Ladeport (hinten links)</span></li>
+          <li><span class="bt">HV-Kabel und Busbars: <b>orangefarben</b> — NIE schneiden!</span></li>
+        </ul>
+        <div class="divider">16V Niedervolt-System</div>
+        <ul class="bullets">
+          <li><span class="bt">16V-Batterie: Unter Motorhaube, links neben Windschutzscheibe</span></li>
+          <li><span class="bt">Betreibt: Airbags, Sitze, Touchscreen, Schlösser, Leuchten</span></li>
+          <li><span class="bt">Wird vom HV-System geladen — Kabel schneiden allein reicht nicht!</span></li>
+        </ul>
+        <div class="divider">Kühlmittel</div>
+        <ul class="bullets">
+          <li><span class="bt">Farbe: <b>Blau oder Orange</b> — klare Flüssigkeit ist Wasser</span></li>
+          <li><span class="bt">Kann bei Batterieverletzung austreten</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- HOCHFESTE ZONEN -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🏗️</span>
+        <span class="sec-title">Schneid- & No-Cut-Zonen</span>
+        <span class="sec-badge badge-orange">STRUKTUR</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <div class="divider">Hochfeste Zonen (geeignete Werkzeuge nötig)</div>
+        <ul class="bullets">
+          <li><span class="bt">A-Säule, B-Säule: Ultra-hochfester Stahl</span></li>
+          <li><span class="bt">Türrahmen (innen/außen): bis 2,0 mm hochfester Stahl</span></li>
+          <li><span class="bt">Vordere Dachholme (oben/unten): 1,0–1,4 mm</span></li>
+          <li><span class="bt">Hintere Dachholme: 1,4 mm</span></li>
+          <li><span class="bt">Türen selbst: Aluminium</span></li>
+        </ul>
+        <div class="divider">No-Cut-Zonen (roségold/pink markiert)</div>
+        <ul class="bullets">
+          <li><span class="bt">Alle orangefarbenen HV-Kabel und Busbars</span></li>
+          <li><span class="bt">Gasdruck-Inflationszylidner (Vorhangairbags, hinten Dach)</span></li>
+          <li><span class="bt">Sitzgurt-Straffpyrotechnik (B-Säule oben/unten)</span></li>
+          <li><span class="bt">Aktive-Haube-Pyrotechnik (unter Motorhaube, Windschutzscheibenbasis)</span></li>
+          <li><span class="bt">Gasstruts (Heckklappen-Stützen)</span></li>
+        </ul>
+        <div class="divider">Scheibenmaterial</div>
+        <ul class="bullets">
+          <li><span class="bt"><b>Verbundglas (Laminated):</b> Frontscheibe, Dach, bewegliche Türscheiben → erzeugt viel Glasstaub beim Schneiden, Atemschutz empfohlen</span></li>
+          <li><span class="bt"><b>Einscheibenglas (Tempered):</b> Heckfenster, feste Seitenfenster hinten → splittert bei Einschlag</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- STARTHILFE -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🔋</span>
+        <span class="sec-title">12V Starthilfe (Jumpstart)</span>
+        <span class="sec-badge badge-blue">TECHNIK</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Motorhaube öffnen (extern wie oben)</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Wartungsabdeckung nach oben herausziehen</span></li>
+          <li><span class="step-num">3</span><span class="step-text">Schwarze Gummidichtung zurückklappen → <b>roter Jumpstart-Pol (+)</b> sichtbar</span></li>
+          <li><span class="step-num">4</span><span class="step-text">Rote Abdeckung entfernen → <b>Rotes (+) Kabel</b> anschließen</span></li>
+          <li><span class="step-num">5</span><span class="step-text"><b>HEPA-Filter-Bolzen = Minus (–)</b> → Schwarzes (–) Kabel anschließen</span></li>
+          <li><span class="step-num">6</span><span class="step-text">Externe Stromquelle einschalten — Touchscreen kann einige Minuten zum Aufwachen brauchen</span></li>
+          <li><span class="step-num">7</span><span class="step-text">Kabel trennen: zuerst Schwarz (–), dann Rot (+)</span></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- TOUCHSCREEN RESET -->
+    <div class="section">
+      <div class="sec-header" onclick="toggle(this)">
+        <span class="sec-icon">🖥️</span>
+        <span class="sec-title">Touchscreen reagiert nicht</span>
+        <span class="sec-badge badge-blue">TECHNIK</span>
+        <span class="sec-arrow">›</span>
+      </div>
+      <div class="sec-body">
+        <ol class="steps">
+          <li><span class="step-num">1</span><span class="step-text">Beide <b>Scrollrad-Knöpfe am Lenkrad</b> gleichzeitig drücken und halten</span></li>
+          <li><span class="step-num">2</span><span class="step-text">Ca. <b>10 Sekunden</b> gedrückt halten bis Bildschirm erlischt</span></li>
+          <li><span class="step-num">3</span><span class="step-text">Loslassen — Touchscreen startet neu (dauert ca. 30–60 Sek.)</span></li>
+        </ol>
+        <div class="info-box" style="margin-top:10px"><span class="w-text">ℹ️ Das Fahrzeug bleibt dabei fahrbereit — nur der Touchscreen wird neugestartet.</span></div>
+      </div>
+    </div>
+
+  </div><!-- end panel-technik -->
+
+</div><!-- end app -->
+
+<script>
+function openApp() {
+  document.getElementById('launch').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+function closeApp() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('launch').style.display = 'flex';
+}
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['notfall','manual','technik'][i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+function toggle(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.sec-arrow');
+  const open = body.classList.contains('open');
+  const nextOpen = !open;
+  body.classList.toggle('open', !open);
+  arrow.classList.toggle('open', !open);
+  // ARIA state for screen readers.
+  header.setAttribute('aria-expanded', String(nextOpen));
+}
+
+// Accessibility: Accordion-Header tastaturbedienbar + ARIA
+(function initAccordions() {
+  const headers = document.querySelectorAll(".sec-header");
+  headers.forEach((header, idx) => {
+    const body = header.nextElementSibling;
+    if (!body || !body.classList.contains("sec-body")) return;
+
+    const bodyId = body.id || `sec-body-${idx}`;
+    body.id = bodyId;
+
+    header.setAttribute("role", "button");
+    header.setAttribute("tabindex", "0");
+    header.setAttribute("aria-controls", bodyId);
+    header.setAttribute("aria-expanded", body.classList.contains("open") ? "true" : "false");
+
+    header.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle(header);
+      }
+    });
+  });
+})();
+
+// Security: target="_blank" hardening for all external links
+(function setExternalLinkRel() {
+  document.querySelectorAll('a[target="_blank"]').forEach((a) => {
+    const rel = new Set((a.getAttribute("rel") || "").split(/\s+/).filter(Boolean));
+    rel.add("noopener");
+    rel.add("noreferrer");
+    a.setAttribute("rel", Array.from(rel).join(" "));
+  });
+})();
+
+// PWA: Service Worker registrieren (Offline-Fallback)
+(function () {
+  if (!("serviceWorker" in navigator)) return;
+  // Service Worker benötigt einen sicheren Kontext (iOS: HTTPS).
+  if (!window.isSecureContext) return;
+
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./service-worker.js").catch(function () {
+      // Silently ignore (z.B. ältere Browser / Offline).
+    });
+  });
+})();
+</script>
+</body>
+</html>
